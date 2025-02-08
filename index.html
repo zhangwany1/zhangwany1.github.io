@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图片浏览器</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      text-align: center;
+    }
+    img {
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+    .btn:disabled {
+      background-color: #999;
+      cursor: not-allowed;
+    }
+    .link-btn {
+      background-color: #28a745;
+      margin-left: 10px;
+    }
+    .link-btn:hover {
+      background-color: #218838;
+    }
+    #loading {
+      display: none;
+      margin-top: 20px;
+      font-size: 18px;
+      color: #888;
+    }
+    /* 新增：绿色背景的文字提示 */
+    .image-tip {
+      background-color: #28a745;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 新增：绿色背景的文字提示 -->
+    <div class="image-tip">请欣赏美图稍等一会儿</div>
+    <div id="loading">图片加载中...</div>
+    <img id="imageDisplay" src="" />
+    <br />
+    <button class="btn" id="nextBtn">下一张</button>
+    <a href="/" class="btn link-btn">返回首页</a>
+  </div>
+
+  <script>
+    let images = [];
+    let currentIndex = 0;
+    const imageDisplay = document.getElementById('imageDisplay');
+    const nextBtn = document.getElementById('nextBtn');
+    const loadingText = document.getElementById('loading');
+    let loadingInterval;
+
+    // 读取 LIST.TXT 文件中的图片链接
+    fetch('LIST.TXT')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('无法读取文件');
+        }
+        return response.text();
+      })
+      .then(data => {
+        images = data.split('\n').map(url => url.trim()).filter(url => url !== "");
+        if (images.length === 0) {
+          throw new Error('文件中没有有效的图片链接');
+        }
+        currentIndex = Math.floor(Math.random() * images.length);
+        loadImage(images[currentIndex]);
+        preloadNextImage(); // 预加载下一张图片
+      })
+      .catch(error => {
+        console.error('读取文件失败:', error);
+        imageDisplay.alt = '加载图片失败，请检查 LIST.TXT 文件';
+      });
+
+    // 动态加载文字
+    function startLoadingAnimation() {
+      let dots = 0;
+      loadingInterval = setInterval(() => {
+        dots = (dots + 1) % 4; // 0, 1, 2, 3 轮询
+        loadingText.textContent = "图片加载中" + ".".repeat(dots);
+      }, 500);
+    }
+
+    // 停止加载文字
+    function stopLoadingAnimation() {
+      clearInterval(loadingInterval);
+      loadingText.style.display = 'none';
+    }
+
+    // 加载图片并显示加载中的提示
+    function loadImage(url) {
+      loadingText.style.display = 'block';
+      startLoadingAnimation();
+      imageDisplay.src = ''; // 清空现有图片
+      const img = new Image();
+      img.onload = function() {
+        imageDisplay.src = url;
+        stopLoadingAnimation();
+      };
+      img.src = url;
+    }
+
+    // 预加载下一张图片
+    function preloadNextImage() {
+      const nextIndex = (currentIndex + 1) % images.length;
+      const nextImage = new Image();
+      nextImage.src = images[nextIndex];
+    }
+
+    // 点击“下一张”按钮，2秒倒计时
+    nextBtn.addEventListener('click', function() {
+      if (images.length === 0) return;
+      nextBtn.disabled = true;
+      let countdown = 2;
+      nextBtn.textContent = `请等待 ${countdown} 秒`;
+
+      const countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+          nextBtn.textContent = `请等待 ${countdown} 秒`;
+        } else {
+          clearInterval(countdownInterval);
+          nextBtn.textContent = '下一张';
+          nextBtn.disabled = false;
+        }
+      }, 1000);
+
+      currentIndex = (currentIndex + 1) % images.length;
+      loadImage(images[currentIndex]);
+      preloadNextImage(); // 预加载下一张图片
+    });
+  </script>
+</body>
+</html>
